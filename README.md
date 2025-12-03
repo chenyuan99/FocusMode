@@ -1,5 +1,8 @@
 # FocusMode
 
+[![CI](https://github.com/chenyuan99/FocusMode/actions/workflows/ci.yml/badge.svg)](https://github.com/chenyuan99/FocusMode/actions/workflows/ci.yml)
+[![Release](https://github.com/chenyuan99/FocusMode/actions/workflows/release.yml/badge.svg)](https://github.com/chenyuan99/FocusMode/actions/workflows/release.yml)
+
 A simple Go tool to help you focus by organizing desktop shortcuts. Move shortcuts from your cluttered desktop to an organized folder.
 
 ## Features
@@ -12,6 +15,15 @@ A simple Go tool to help you focus by organizing desktop shortcuts. Move shortcu
 - 🧪 Dry-run mode to preview changes
 
 ## Installation
+
+### From Releases (Recommended)
+
+Download the latest release from the [Releases page](https://github.com/chenyuan99/FocusMode/releases):
+- **Windows**: `focusmode-windows-amd64.zip`
+
+Extract the archive and run `focusmode-windows-amd64.exe`.
+
+### From Source
 
 1. Make sure you have Go installed (1.21 or later)
 2. Install dependencies:
@@ -124,6 +136,52 @@ Running `./focusmode -mode gamemode` will:
 - Create `~/GameMode_Shortcuts` folder
 - Move `Steam.lnk` and `Epic Games.lnk` to that folder
 - Leave work shortcuts on the desktop
+
+## Releases
+
+Releases are automatically built and published when you push a tag matching `v*.*.*` (e.g., `v1.0.0`).
+
+### Creating a Release
+
+1. **Using Git tags** (recommended):
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+2. **Using GitHub Actions**:
+   - Go to Actions → Release workflow
+   - Click "Run workflow"
+   - Enter the version tag (e.g., `v1.0.0`)
+
+The workflow will automatically:
+- Build binaries for all platforms (Windows, macOS, Linux - AMD64 and ARM64)
+- Create release archives (`.tar.gz` for Unix, `.zip` for Windows)
+- Generate checksums for verification
+- Create a GitHub release with all artifacts
+
+### Verifying Releases
+
+Download the `checksums.txt` file and verify:
+```bash
+sha256sum -c checksums.txt
+```
+
+## Development
+
+### Running Tests
+```bash
+go test ./...
+```
+
+### Building Locally
+```bash
+# Build for current platform
+go build -o focusmode move.go
+
+# Build for specific platform
+GOOS=linux GOARCH=amd64 go build -o focusmode-linux-amd64 move.go
+```
 
 ## License
 
