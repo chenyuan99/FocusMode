@@ -1,0 +1,26 @@
+# FocusMode Configuration
+# Define shortcuts to move from desktop to organized folders for different modes
+
+modes:
+  focusmode:
+    destination: "FocusMode_Shortcuts"  # Folder name in home directory
+    shortcuts:
+      # List of shortcut names to move (exact filenames as they appear on desktop)
+      - "MyShortcut.lnk"
+      - "AnotherShortcut.lnk"
+      - "MyShortcut.lnk.txt"
+    move_all: false  # Set to true to move all shortcuts (ignores the shortcuts list above)
+  
+  gamemode:
+    destination: "GameMode_Shortcuts"  # Folder name in home directory
+    shortcuts:
+      # List of game shortcuts to move
+      - "Steam.lnk"
+      - "Epic Games.lnk"
+      - "GameShortcut.lnk"
+    move_all: false  # Set to true to move all shortcuts (ignores the shortcuts list above)
+
+# Default mode to use if not specified via command line
+default_mode: "focusmode"
+
+
