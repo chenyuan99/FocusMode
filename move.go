@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -22,6 +23,205 @@ type ModeConfig struct {
 type Config struct {
 	Modes       map[string]ModeConfig `yaml:"modes"`
 	DefaultMode string                `yaml:"default_mode"`
+}
+
+// SessionState represents the state of a focus session
+type SessionState int
+
+const (
+	StateRunning SessionState = iota
+	StatePaused
+	StateCompleted
+	StateInterrupted
+)
+
+// FocusSession represents a timed focus session
+type FocusSession struct {
+	Duration       time.Duration // Total session duration
+	Mode           string        // Mode to apply (focusmode/gamemode)
+	StartTime      time.Time     // When session started
+	PausedAt       *time.Time    // When session was paused (nil if not paused)
+	PausedTotal    time.Duration // Total time spent paused
+	AutoRestore    bool          // Whether to auto-restore on completion
+	Config         *Config       // Reference to loaded config
+	State          SessionState  // Current state of the session
+	MovedShortcuts []string      // List of shortcuts that were moved during session start
+}
+
+// elapsed returns the time elapsed since the session started, excluding paused time
+func (fs *FocusSession) elapsed() time.Duration {
+	if fs.State == StatePaused && fs.PausedAt != nil {
+		// If currently paused, calculate elapsed up to pause point
+		return fs.PausedAt.Sub(fs.StartTime) - fs.PausedTotal
+	}
+	// If running or completed, calculate elapsed up to now
+	return time.Since(fs.StartTime) - fs.PausedTotal
+}
+
+// remaining returns the time remaining in the session
+func (fs *FocusSession) remaining() time.Duration {
+	elapsed := fs.elapsed()
+	remaining := fs.Duration - elapsed
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
+}
+
+// startFocusSession creates and initializes a new focus session with validation
+func startFocusSession(config *Config, modeName string, duration int, autoRestore bool) (*FocusSession, error) {
+	// Validate duration is positive
+	if duration <= 0 {
+		return nil, fmt.Errorf("duration must be positive, got: %d minutes", duration)
+	}
+
+	// Validate mode exists in configuration
+	_, err := config.getModeConfig(modeName)
+	if err != nil {
+		availableModes := config.getAvailableModes()
+		return nil, fmt.Errorf("invalid mode '%s'. Available modes: %v", modeName, availableModes)
+	}
+
+	// Initialize FocusSession struct with validated inputs
+	session := &FocusSession{
+		Duration:    time.Duration(duration) * time.Minute,
+		Mode:        modeName,
+		StartTime:   time.Now(),
+		PausedAt:    nil,
+		PausedTotal: 0,
+		AutoRestore: autoRestore,
+		Config:      config,
+		State:       StateRunning,
+	}
+
+	return session, nil
+}
+
+// organizeShortcuts moves shortcuts according to the session's mode configuration
+// Returns the list of successfully moved shortcuts and any error encountered
+func (fs *FocusSession) organizeShortcuts() ([]string, error) {
+	// Get mode configuration
+	modeConfig, err := fs.Config.getModeConfig(fs.Mode)
+	if err != nil {
+		return nil, fmt.Errorf("error getting mode configuration: %w", err)
+	}
+
+	// Get destination folder
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("error getting home directory: %w", err)
+	}
+
+	destinationFolder := filepath.Join(homeDir, modeConfig.Destination)
+
+	// Create the destination folder if it doesn't exist
+	if _, err := os.Stat(destinationFolder); os.IsNotExist(err) {
+		err := os.MkdirAll(destinationFolder, 0755)
+		if err != nil {
+			return nil, fmt.Errorf("error creating destination folder: %w", err)
+		}
+		fmt.Printf("Created destination folder: %s\n", destinationFolder)
+	}
+
+	// Determine which shortcuts to move
+	var shortcutsToMove []string
+
+	if modeConfig.MoveAll {
+		// Get all shortcuts from desktop
+		allShortcuts, err := getAllDesktopShortcuts()
+		if err != nil {
+			return nil, fmt.Errorf("error getting desktop shortcuts: %w", err)
+		}
+		shortcutsToMove = allShortcuts
+		fmt.Printf("Moving ALL shortcuts from desktop (%d found)\n", len(shortcutsToMove))
+	} else {
+		shortcutsToMove = modeConfig.Shortcuts
+		fmt.Printf("Moving specified shortcuts (%d configured)\n", len(shortcutsToMove))
+	}
+
+	// Move shortcuts and track successful moves
+	var movedShortcuts []string
+	successCount := 0
+	failCount := 0
+
+	for _, shortcutName := range shortcutsToMove {
+		err := moveDesktopShortcut(shortcutName, destinationFolder)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error moving '%s': %v\n", shortcutName, err)
+			failCount++
+		} else {
+			fmt.Printf("✓ Moved: %s\n", shortcutName)
+			movedShortcuts = append(movedShortcuts, shortcutName)
+			successCount++
+		}
+	}
+
+	// Display summary
+	fmt.Println("\n--- Organization Summary ---")
+	fmt.Printf("Mode: %s\n", fs.Mode)
+	fmt.Printf("Successfully moved: %d\n", successCount)
+	if failCount > 0 {
+		fmt.Printf("Failed: %d\n", failCount)
+	}
+	fmt.Printf("Shortcuts moved to: %s\n\n", destinationFolder)
+
+	// Return the list of moved shortcuts even if some failed
+	// This allows partial restoration if needed
+	return movedShortcuts, nil
+}
+
+// formatDuration formats a duration into a human-readable string
+// Returns format like "25m 30s", "1h 5m 30s", "45s", or "0s"
+func formatDuration(d time.Duration) string {
+	if d == 0 {
+		return "0s"
+	}
+
+	// Get total seconds
+	totalSeconds := int(d.Seconds())
+
+	hours := totalSeconds / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
+
+	// Build the formatted string
+	var parts []string
+
+	if hours > 0 {
+		parts = append(parts, fmt.Sprintf("%dh", hours))
+	}
+
+	if minutes > 0 {
+		parts = append(parts, fmt.Sprintf("%dm", minutes))
+	}
+
+	if seconds > 0 || len(parts) == 0 {
+		parts = append(parts, fmt.Sprintf("%ds", seconds))
+	}
+
+	return strings.Join(parts, " ")
+}
+
+// displayProgress displays the current progress of a focus session
+// Uses carriage return to update the same line
+// Shows emoji indicators: ⏳ for running, ⏸ for paused
+func displayProgress(elapsed, remaining time.Duration, paused bool) {
+	var emoji string
+	var status string
+
+	if paused {
+		emoji = "⏸"
+		status = "Paused"
+	} else {
+		emoji = "⏳"
+		status = "Focus Session"
+	}
+
+	elapsedStr := formatDuration(elapsed)
+	remainingStr := formatDuration(remaining)
+
+	// Use carriage return to overwrite the same line
+	fmt.Printf("\r%s %s: %s elapsed | %s remaining", emoji, status, elapsedStr, remainingStr)
 }
 
 // getDesktopPath returns the desktop path for the current operating system
@@ -214,8 +414,8 @@ type CategoryConfig struct {
 
 // CategoriesConfig represents the categories configuration structure
 type CategoriesConfig struct {
-	Categories   map[string]CategoryConfig `yaml:"categories"`
-	CategoryOrder []string                 `yaml:"category_order"`
+	Categories    map[string]CategoryConfig `yaml:"categories"`
+	CategoryOrder []string                  `yaml:"category_order"`
 }
 
 // loadCategoriesConfig loads the categories configuration from categories.yml
@@ -373,7 +573,7 @@ func listDesktopFilesWithConfig(categoriesConfig *CategoriesConfig) {
 			} else if ext != "" {
 				typeIndicator = fmt.Sprintf(" [%s]", ext)
 			}
-			
+
 			// Show suggested mode (which mode will move this shortcut)
 			fileCategory := categorizeShortcut(file, categoriesConfig)
 			suggestedMode := getModeForCategory(fileCategory)
@@ -383,7 +583,7 @@ func listDesktopFilesWithConfig(categoriesConfig *CategoriesConfig) {
 			} else {
 				modeIndicator = " → 💼 FocusMode (moves games/distractions)"
 			}
-			
+
 			fmt.Printf("  %d. %s%s%s\n", i+1, file, typeIndicator, modeIndicator)
 		}
 		fmt.Println()
@@ -432,7 +632,7 @@ func getModeForCategory(category ShortcutCategory) string {
 
 // generateProfileFromDesktop generates a profile.yml based on desktop shortcuts and categories
 func generateProfileFromDesktop(configPath string, categoriesPath string) {
-	fmt.Println("Generating profile.yml from desktop shortcuts...\n")
+	fmt.Println("Generating profile.yml from desktop shortcuts...")
 
 	// Get desktop shortcuts
 	shortcuts, err := getAllDesktopShortcuts()
@@ -461,7 +661,7 @@ func generateProfileFromDesktop(configPath string, categoriesPath string) {
 	for _, shortcut := range shortcuts {
 		category := categorizeShortcut(shortcut, categoriesConfig)
 		modeName := getModeForCategory(category)
-		
+
 		if modeName == "gamemode" {
 			gamemodeShortcuts = append(gamemodeShortcuts, shortcut)
 		} else {
@@ -617,7 +817,7 @@ func restoreShortcutsForMode(config *Config, modeName string, dryRun bool) {
 
 // restoreAllShortcuts restores shortcuts from all modes back to desktop
 func restoreAllShortcuts(config *Config, dryRun bool) {
-	fmt.Println("Restoring shortcuts from all modes...\n")
+	fmt.Println("Restoring shortcuts from all modes...")
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
