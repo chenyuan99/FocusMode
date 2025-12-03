@@ -50,9 +50,18 @@ func getDesktopPath() (string, error) {
 
 // moveDesktopShortcut moves a shortcut from desktop to destination directory
 func moveDesktopShortcut(shortcutName string, destinationDir string) error {
-	desktopPath, err := getDesktopPath()
-	if err != nil {
-		return fmt.Errorf("error getting desktop path: %w", err)
+	return moveDesktopShortcutFromPath(shortcutName, destinationDir, "")
+}
+
+// moveDesktopShortcutFromPath moves a shortcut from a specific desktop path to destination directory
+// If desktopPath is empty, it uses getDesktopPath()
+func moveDesktopShortcutFromPath(shortcutName string, destinationDir string, desktopPath string) error {
+	var err error
+	if desktopPath == "" {
+		desktopPath, err = getDesktopPath()
+		if err != nil {
+			return fmt.Errorf("error getting desktop path: %w", err)
+		}
 	}
 
 	oldPath := filepath.Join(desktopPath, shortcutName)
@@ -116,9 +125,18 @@ func (c *Config) getAvailableModes() []string {
 
 // getAllDesktopShortcuts returns all files on the desktop
 func getAllDesktopShortcuts() ([]string, error) {
-	desktopPath, err := getDesktopPath()
-	if err != nil {
-		return nil, err
+	return getAllDesktopShortcutsFromPath("")
+}
+
+// getAllDesktopShortcutsFromPath returns all files from a specific desktop path
+// If desktopPath is empty, it uses getDesktopPath()
+func getAllDesktopShortcutsFromPath(desktopPath string) ([]string, error) {
+	var err error
+	if desktopPath == "" {
+		desktopPath, err = getDesktopPath()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	entries, err := os.ReadDir(desktopPath)

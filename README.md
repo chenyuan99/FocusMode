@@ -171,8 +171,26 @@ sha256sum -c checksums.txt
 
 ### Running Tests
 ```bash
+# Run all tests
 go test ./...
+
+# Run tests with verbose output
+go test -v ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run a specific test
+go test -v -run TestGetDesktopPath
 ```
+
+The test suite includes:
+- ✅ Configuration loading and parsing
+- ✅ Mode configuration retrieval
+- ✅ Desktop path detection (cross-platform)
+- ✅ File moving operations
+- ✅ Desktop shortcut listing
+- ✅ Error handling and edge cases
 
 ### Building Locally
 ```bash
