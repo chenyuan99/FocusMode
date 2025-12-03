@@ -37,6 +37,8 @@ Extract the archive and run `focusmode-windows-amd64.exe`.
 
 ## Configuration
 
+### Profile Configuration (`profile.yml`)
+
 Edit `profile.yml` to configure which shortcuts to move for different modes:
 
 ```yaml
@@ -58,6 +60,50 @@ modes:
 default_mode: "focusmode"  # Default mode if not specified
 ```
 
+### Categories Configuration (`categories.yml`)
+
+The `categories.yml` file defines keywords used to automatically categorize shortcuts when using `-list-desktop`. This helps identify which shortcuts are games, development tools, work applications, etc.
+
+You can customize the keywords and categories to match your needs. The file structure:
+
+```yaml
+categories:
+  game:
+    name: "Games"
+    icon: "🎮"
+    keywords:
+      - "steam"
+      - "epic"
+      - "game"
+      # ... more keywords
+
+  development:
+    name: "Development Tools"
+    icon: "💻"
+    keywords:
+      - "code"
+      - "docker"
+      - "git"
+      # ... more keywords
+
+  work:
+    name: "Work/Productivity"
+    icon: "💼"
+    keywords:
+      - "office"
+      - "word"
+      - "excel"
+      # ... more keywords
+
+category_order:
+  - game
+  - development
+  - work
+  - other
+```
+
+**Note:** If `categories.yml` doesn't exist, the tool will use default categories. You can create your own to customize the categorization logic.
+
 ## Usage
 
 ### Basic usage (uses default mode)
@@ -76,6 +122,40 @@ default_mode: "focusmode"  # Default mode if not specified
 ./focusmode -list-modes
 ```
 
+### List desktop files
+```bash
+./focusmode -list-desktop
+```
+This command shows all files on your desktop, grouped by category, with suggested modes for each shortcut. This is helpful when configuring which shortcuts to move.
+
+### Auto-generate profile
+```bash
+./focusmode -auto-config
+```
+This command automatically generates `profile.yml` based on your desktop shortcuts:
+- **Games** → `focusmode` (moved when focusing to remove distractions)
+- **Work/Development tools** → `gamemode` (moved when gaming to remove work distractions)
+- **Other** → `focusmode` (moved when focusing)
+
+**Logic:**
+- **FocusMode**: Moves games away → keeps work tools on desktop for quick access
+- **GameMode**: Moves work tools away → keeps games on desktop for quick access
+
+The generated profile can be reviewed and customized as needed.
+
+### Restore shortcuts to desktop
+```bash
+# Restore shortcuts from a specific mode
+./focusmode -restore -mode focusmode
+
+# Restore shortcuts from all modes
+./focusmode -restore-all
+
+# Preview what would be restored (dry-run)
+./focusmode -restore -mode gamemode -dry-run
+```
+This command moves shortcuts back from organized folders to your desktop. Useful when you want to restore your desktop to its original state.
+
 ### With custom config file
 ```bash
 ./focusmode -config myconfig.yml
@@ -88,9 +168,14 @@ default_mode: "focusmode"  # Default mode if not specified
 
 ### Command-line options
 - `-config`: Path to configuration file (default: `profile.yml`)
+- `-categories`: Path to categories configuration file (default: `categories.yml`)
 - `-mode`: Mode to use (focusmode, gamemode, etc.) - uses default if not specified
-- `-dry-run`: Preview what would be moved without actually moving files
+- `-dry-run`: Preview what would be moved/restored without actually moving files
 - `-list-modes`: List all available modes from configuration
+- `-list-desktop`: List all files on your desktop with suggested modes (useful for configuring shortcuts)
+- `-auto-config`: Auto-generate `profile.yml` based on desktop shortcuts and categories
+- `-restore`: Restore shortcuts from a specific mode's folder back to desktop
+- `-restore-all`: Restore shortcuts from all modes back to desktop
 
 ## How it works
 

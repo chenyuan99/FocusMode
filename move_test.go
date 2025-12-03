@@ -333,3 +333,384 @@ func TestModeConfigDefaults(t *testing.T) {
 	}
 }
 
+func TestGetModeForCategory(t *testing.T) {
+	tests := []struct {
+		category ShortcutCategory
+		expected string
+		desc     string
+	}{
+		{ShortcutCategory("game"), "focusmode", "Games should go to focusmode (moved when focusing)"},
+		{ShortcutCategory("development"), "gamemode", "Development tools should go to gamemode (moved when gaming)"},
+		{ShortcutCategory("work"), "gamemode", "Work tools should go to gamemode (moved when gaming)"},
+		{ShortcutCategory("other"), "focusmode", "Other items should go to focusmode"},
+		{ShortcutCategory("unknown"), "focusmode", "Unknown categories should default to focusmode"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			result := getModeForCategory(tt.category)
+			if result != tt.expected {
+				t.Errorf("getModeForCategory(%s) = %s, want %s", tt.category, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCategorizeShortcut(t *testing.T) {
+	// Create a test categories config
+	categoriesConfig := &CategoriesConfig{
+		Categories: map[string]CategoryConfig{
+			"game": {
+				Name:     "Games",
+				Icon:     "🎮",
+				Keywords: []string{"steam", "game", "epic"},
+			},
+			"development": {
+				Name:     "Development Tools",
+				Icon:     "💻",
+				Keywords: []string{"code", "docker", "cursor"},
+			},
+			"work": {
+				Name:     "Work/Productivity",
+				Icon:     "💼",
+				Keywords: []string{"office", "word", "excel"},
+			},
+		},
+		CategoryOrder: []string{"game", "development", "work", "other"},
+	}
+
+	tests := []struct {
+		name     string
+		expected ShortcutCategory
+		desc     string
+	}{
+		{"Steam.lnk", ShortcutCategory("game"), "Game shortcut"},
+		{"My Game.url", ShortcutCategory("game"), "Game URL"},
+		{"Visual Studio Code.lnk", ShortcutCategory("development"), "Development tool"},
+		{"Docker Desktop.lnk", ShortcutCategory("development"), "Development tool"},
+		{"Cursor.lnk", ShortcutCategory("development"), "Development tool"},
+		{"Microsoft Word.lnk", ShortcutCategory("work"), "Work tool"},
+		{"Excel.lnk", ShortcutCategory("work"), "Work tool"},
+		{"RandomFile.txt", ShortcutCategory("other"), "Uncategorized file"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			result := categorizeShortcut(tt.name, categoriesConfig)
+			if result != tt.expected {
+				t.Errorf("categorizeShortcut(%s) = %s, want %s", tt.name, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestLoadCategoriesConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "categories.yml")
+
+	// Test valid categories config
+	validConfig := `categories:
+  game:
+    name: "Games"
+    icon: "🎮"
+    keywords:
+      - "steam"
+      - "game"
+  development:
+    name: "Development Tools"
+    icon: "💻"
+    keywords:
+      - "code"
+      - "docker"
+category_order:
+  - game
+  - development
+  - other
+`
+
+	err := os.WriteFile(configPath, []byte(validConfig), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test config: %v", err)
+	}
+
+	config, err := loadCategoriesConfig(configPath)
+	if err != nil {
+		t.Fatalf("loadCategoriesConfig() returned error: %v", err)
+	}
+
+	if config == nil {
+		t.Fatal("loadCategoriesConfig() returned nil config")
+	}
+
+	if len(config.Categories) != 2 {
+		t.Errorf("Expected 2 categories, got %d", len(config.Categories))
+	}
+
+	if gameCat, ok := config.Categories["game"]; ok {
+		if gameCat.Name != "Games" {
+			t.Errorf("Expected game category name 'Games', got '%s'", gameCat.Name)
+		}
+		if len(gameCat.Keywords) != 2 {
+			t.Errorf("Expected 2 keywords for game, got %d", len(gameCat.Keywords))
+		}
+	} else {
+		t.Error("Game category not found")
+	}
+
+	// Test default config when file doesn't exist
+	defaultConfig, err := loadCategoriesConfig("nonexistent.yml")
+	if err != nil {
+		t.Fatalf("loadCategoriesConfig() should return default config, got error: %v", err)
+	}
+	if defaultConfig == nil {
+		t.Error("Expected default config when file doesn't exist")
+	}
+}
+
+func TestRestoreShortcutToDesktop(t *testing.T) {
+	// Create temporary directories
+	tempDir := t.TempDir()
+	desktopDir := filepath.Join(tempDir, "Desktop")
+	sourceDir := filepath.Join(tempDir, "Source")
+
+	err := os.MkdirAll(desktopDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create desktop directory: %v", err)
+	}
+
+	err = os.MkdirAll(sourceDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create source directory: %v", err)
+	}
+
+	// Create a test file in source directory
+	testFile := filepath.Join(sourceDir, "test.lnk")
+	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Set USERPROFILE environment variable for Windows to point to tempDir
+	originalUserProfile := os.Getenv("USERPROFILE")
+	if runtime.GOOS == "windows" {
+		os.Setenv("USERPROFILE", tempDir)
+		defer os.Setenv("USERPROFILE", originalUserProfile)
+	}
+
+	// Test restoring the file
+	err = restoreShortcutToDesktop("test.lnk", sourceDir)
+	if err != nil {
+		t.Fatalf("restoreShortcutToDesktop() returned error: %v", err)
+	}
+
+	// Verify file was moved to desktop
+	expectedPath := filepath.Join(desktopDir, "test.lnk")
+	if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
+		t.Error("File was not restored to desktop")
+	}
+
+	if _, err := os.Stat(testFile); err == nil {
+		t.Error("File still exists in source location")
+	}
+
+	// Test restoring nonexistent file
+	err = restoreShortcutToDesktop("nonexistent.lnk", sourceDir)
+	if err == nil {
+		t.Error("Expected error when restoring nonexistent file")
+	}
+
+	// Test restoring when file already exists on desktop
+	err = os.WriteFile(filepath.Join(sourceDir, "existing.lnk"), []byte("source"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source file: %v", err)
+	}
+	err = os.WriteFile(filepath.Join(desktopDir, "existing.lnk"), []byte("desktop"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create desktop file: %v", err)
+	}
+
+	err = restoreShortcutToDesktop("existing.lnk", sourceDir)
+	if err == nil {
+		t.Error("Expected error when file already exists on desktop")
+	}
+}
+
+func TestGetShortcutsInFolder(t *testing.T) {
+	tempDir := t.TempDir()
+	testFolder := filepath.Join(tempDir, "TestFolder")
+
+	err := os.MkdirAll(testFolder, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create test folder: %v", err)
+	}
+
+	// Create test files
+	testFiles := []string{"file1.lnk", "file2.lnk", "file3.txt"}
+	for _, filename := range testFiles {
+		filePath := filepath.Join(testFolder, filename)
+		err := os.WriteFile(filePath, []byte("test"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test file %s: %v", filename, err)
+		}
+	}
+
+	// Create a subdirectory (should be ignored)
+	subDir := filepath.Join(testFolder, "subdir")
+	err = os.MkdirAll(subDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create subdirectory: %v", err)
+	}
+
+	shortcuts, err := getShortcutsInFolder(testFolder)
+	if err != nil {
+		t.Fatalf("getShortcutsInFolder() returned error: %v", err)
+	}
+
+	if len(shortcuts) != len(testFiles) {
+		t.Errorf("Expected %d shortcuts, got %d", len(testFiles), len(shortcuts))
+	}
+
+	// Verify all test files are in the list
+	shortcutMap := make(map[string]bool)
+	for _, shortcut := range shortcuts {
+		shortcutMap[shortcut] = true
+	}
+
+	for _, testFile := range testFiles {
+		if !shortcutMap[testFile] {
+			t.Errorf("Expected shortcut %s not found in results", testFile)
+		}
+	}
+}
+
+func TestGenerateProfileFromDesktop(t *testing.T) {
+	// Create temporary desktop directory
+	tempDir := t.TempDir()
+	desktopDir := filepath.Join(tempDir, "Desktop")
+	configPath := filepath.Join(tempDir, "profile.yml")
+	categoriesPath := filepath.Join(tempDir, "categories.yml")
+
+	err := os.MkdirAll(desktopDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create desktop directory: %v", err)
+	}
+
+	// Create test shortcuts
+	testShortcuts := []string{
+		"Steam.lnk",           // game
+		"Visual Studio Code.lnk", // development
+		"Microsoft Word.lnk",    // work
+		"RandomFile.txt",         // other
+	}
+	for _, filename := range testShortcuts {
+		filePath := filepath.Join(desktopDir, filename)
+		err := os.WriteFile(filePath, []byte("test"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test file %s: %v", filename, err)
+		}
+	}
+
+	// Create categories config
+	categoriesConfig := `categories:
+  game:
+    name: "Games"
+    icon: "🎮"
+    keywords:
+      - "steam"
+      - "game"
+  development:
+    name: "Development Tools"
+    icon: "💻"
+    keywords:
+      - "code"
+      - "visual studio"
+  work:
+    name: "Work/Productivity"
+    icon: "💼"
+    keywords:
+      - "word"
+      - "microsoft"
+category_order:
+  - game
+  - development
+  - work
+  - other
+`
+	err = os.WriteFile(categoriesPath, []byte(categoriesConfig), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write categories config: %v", err)
+	}
+
+	// Set USERPROFILE environment variable for Windows to point to tempDir
+	originalUserProfile := os.Getenv("USERPROFILE")
+	if runtime.GOOS == "windows" {
+		os.Setenv("USERPROFILE", tempDir)
+		defer os.Setenv("USERPROFILE", originalUserProfile)
+	}
+
+	// Generate profile
+	generateProfileFromDesktop(configPath, categoriesPath)
+
+	// Load and verify generated config
+	config, err := loadConfig(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load generated config: %v", err)
+	}
+
+	// Verify focusmode has games and other
+	focusmodeConfig, ok := config.Modes["focusmode"]
+	if !ok {
+		t.Fatal("focusmode not found in generated config")
+	}
+
+	// Focusmode should have Steam.lnk (game) and RandomFile.txt (other)
+	hasSteam := false
+	hasRandomFile := false
+	for _, shortcut := range focusmodeConfig.Shortcuts {
+		if shortcut == "Steam.lnk" {
+			hasSteam = true
+		}
+		if shortcut == "RandomFile.txt" {
+			hasRandomFile = true
+		}
+	}
+	if !hasSteam {
+		t.Error("Steam.lnk (game) should be in focusmode")
+	}
+	if !hasRandomFile {
+		t.Error("RandomFile.txt (other) should be in focusmode")
+	}
+
+	// Verify gamemode has work and development tools
+	gamemodeConfig, ok := config.Modes["gamemode"]
+	if !ok {
+		t.Fatal("gamemode not found in generated config")
+	}
+
+	// Gamemode should have Visual Studio Code.lnk (development) and Microsoft Word.lnk (work)
+	hasVSCode := false
+	hasWord := false
+	for _, shortcut := range gamemodeConfig.Shortcuts {
+		if shortcut == "Visual Studio Code.lnk" {
+			hasVSCode = true
+		}
+		if shortcut == "Microsoft Word.lnk" {
+			hasWord = true
+		}
+	}
+	if !hasVSCode {
+		t.Error("Visual Studio Code.lnk (development) should be in gamemode")
+	}
+	if !hasWord {
+		t.Error("Microsoft Word.lnk (work) should be in gamemode")
+	}
+
+	// Verify destination is Hidden_Shortcuts
+	if focusmodeConfig.Destination != "Hidden_Shortcuts" {
+		t.Errorf("Expected focusmode destination 'Hidden_Shortcuts', got '%s'", focusmodeConfig.Destination)
+	}
+	if gamemodeConfig.Destination != "Hidden_Shortcuts" {
+		t.Errorf("Expected gamemode destination 'Hidden_Shortcuts', got '%s'", gamemodeConfig.Destination)
+	}
+}
+

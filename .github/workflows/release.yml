@@ -63,6 +63,7 @@ jobs:
           mkdir -p release
           cp focusmode-* release/
           cp profile.yml release/
+          cp categories.yml release/
           cp README.md release/
 
       - name: Create checksums
@@ -73,7 +74,7 @@ jobs:
       - name: Create release archive
         working-directory: release
         run: |
-          zip -q focusmode-${{ steps.version.outputs.version }}-windows-amd64.zip focusmode-windows-amd64.exe profile.yml README.md
+          zip -q focusmode-${{ steps.version.outputs.version }}-windows-amd64.zip focusmode-windows-amd64.exe profile.yml categories.yml README.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
