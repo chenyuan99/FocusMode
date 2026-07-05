@@ -156,6 +156,19 @@ The generated profile can be reviewed and customized as needed.
 ```
 This command moves shortcuts back from organized folders to your desktop. Useful when you want to restore your desktop to its original state.
 
+### Switch modes
+```bash
+# Restore currently hidden shortcuts, then apply FocusMode
+./focusmode -switch -mode focusmode
+
+# Restore currently hidden shortcuts, then apply GameMode
+./focusmode -switch -mode gamemode
+
+# Preview a mode switch
+./focusmode -switch -mode gamemode -dry-run
+```
+This is the easiest command to use from a taskbar shortcut because each shortcut can switch directly to one mode.
+
 ### With custom config file
 ```bash
 ./focusmode -config myconfig.yml
@@ -176,6 +189,7 @@ This command moves shortcuts back from organized folders to your desktop. Useful
 - `-auto-config`: Auto-generate `profile.yml` based on desktop shortcuts and categories
 - `-restore`: Restore shortcuts from a specific mode's folder back to desktop
 - `-restore-all`: Restore shortcuts from all modes back to desktop
+- `-switch`: Restore all shortcuts, then apply the selected mode
 
 ## How it works
 
