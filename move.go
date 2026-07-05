@@ -900,6 +900,7 @@ func main() {
 	autoConfig := flag.Bool("auto-config", false, "Auto-generate profile.yml based on desktop shortcuts and categories")
 	restore := flag.Bool("restore", false, "Restore shortcuts from organized folder back to desktop")
 	restoreAll := flag.Bool("restore-all", false, "Restore shortcuts from all modes back to desktop")
+	switchMode := flag.Bool("switch", false, "Restore all shortcuts, then apply the selected mode")
 	flag.Parse()
 
 	// Auto-generate profile if requested
@@ -967,6 +968,12 @@ func main() {
 	modeName := *mode
 	if modeName == "" {
 		modeName = config.DefaultMode
+	}
+
+	if *switchMode {
+		fmt.Printf("Switching to mode: %s\n\n", modeName)
+		restoreAllShortcuts(config, *dryRun)
+		fmt.Println()
 	}
 
 	// Get mode-specific configuration
