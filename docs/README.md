@@ -8,6 +8,7 @@ FocusMode is a command-line tool for keeping your desktop focused. It moves sele
 - [Configuration](configuration.md): Set up `profile.yml` and `categories.yml`.
 - [Command Reference](commands.md): See all supported commands and flags.
 - [Taskbar Shortcuts](taskbar-shortcuts.md): Create one-click Windows shortcuts for switching modes.
+- [System Tray](system-tray.md): Run FocusMode as a persistent Windows tray app.
 - [Troubleshooting](troubleshooting.md): Fix common setup and usage problems.
 
 ## Common Workflows
@@ -40,4 +41,10 @@ Switch directly to a mode:
 
 ```bash
 ./focusmode -switch -mode gamemode
+```
+
+Start the Windows tray app:
+
+```bash
+./focusmode -tray
 ```

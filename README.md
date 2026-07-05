@@ -32,7 +32,7 @@ Extract the archive and run `focusmode-windows-amd64.exe`.
    ```
 3. Build the project:
    ```bash
-   go build -o focusmode move.go
+   go build -o focusmode .
    ```
 
 ## Configuration
@@ -169,6 +169,12 @@ This command moves shortcuts back from organized folders to your desktop. Useful
 ```
 This is the easiest command to use from a taskbar shortcut because each shortcut can switch directly to one mode.
 
+### Run as a system tray app
+```bash
+./focusmode -tray
+```
+On Windows, this starts a persistent notification-area icon. Click the tray icon to switch modes, restore all shortcuts, or quit the tray app.
+
 ### With custom config file
 ```bash
 ./focusmode -config myconfig.yml
@@ -190,6 +196,7 @@ This is the easiest command to use from a taskbar shortcut because each shortcut
 - `-restore`: Restore shortcuts from a specific mode's folder back to desktop
 - `-restore-all`: Restore shortcuts from all modes back to desktop
 - `-switch`: Restore all shortcuts, then apply the selected mode
+- `-tray`: Run as a Windows system tray app
 
 ## How it works
 
@@ -294,10 +301,10 @@ The test suite includes:
 ### Building Locally
 ```bash
 # Build for current platform
-go build -o focusmode move.go
+go build -o focusmode .
 
 # Build for specific platform
-GOOS=linux GOARCH=amd64 go build -o focusmode-linux-amd64 move.go
+GOOS=linux GOARCH=amd64 go build -o focusmode-linux-amd64 .
 ```
 
 ## License

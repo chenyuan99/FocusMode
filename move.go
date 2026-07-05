@@ -901,6 +901,7 @@ func main() {
 	restore := flag.Bool("restore", false, "Restore shortcuts from organized folder back to desktop")
 	restoreAll := flag.Bool("restore-all", false, "Restore shortcuts from all modes back to desktop")
 	switchMode := flag.Bool("switch", false, "Restore all shortcuts, then apply the selected mode")
+	tray := flag.Bool("tray", false, "Run as a Windows system tray app")
 	flag.Parse()
 
 	// Auto-generate profile if requested
@@ -949,6 +950,14 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		os.Exit(1)
+	}
+
+	if *tray {
+		if err := runTray(config, *configPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Error starting tray app: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	// List modes if requested

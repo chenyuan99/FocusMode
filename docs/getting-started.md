@@ -12,13 +12,13 @@ From the repository root:
 
 ```bash
 go mod tidy
-go build -o focusmode move.go
+go build -o focusmode .
 ```
 
 On Windows, you may prefer:
 
 ```bash
-go build -o focusmode.exe move.go
+go build -o focusmode.exe .
 ```
 
 ## First Run
@@ -84,3 +84,13 @@ Use `-switch` when you want one command that changes from the current mode to an
 ```
 
 This restores hidden shortcuts from all configured modes, then applies the selected mode.
+
+## Use the System Tray
+
+On Windows, run:
+
+```bash
+./focusmode -tray
+```
+
+FocusMode will stay open in the notification area. Click the tray icon to switch modes, restore all shortcuts, or quit.

@@ -21,19 +21,19 @@ Run these from the repository root:
 go test ./...
 go test -v ./...
 go test -cover ./...
-go build -o focusmode move.go
+go build -o focusmode .
 ```
 
 On Windows, the CI-style binary name is:
 
 ```bash
-go build -v -o focusmode.exe move.go
+go build -v -o focusmode.exe .
 ```
 
 Before submitting Go code changes, run:
 
 ```bash
-gofmt -w move.go move_test.go
+gofmt -w *.go
 go test ./...
 ```
 

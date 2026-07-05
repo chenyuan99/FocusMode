@@ -56,7 +56,7 @@ jobs:
           GOOS: windows
           GOARCH: amd64
         run: |
-          go build -v -ldflags="-s -w" -o focusmode-windows-amd64.exe move.go
+          go build -v -ldflags="-s -w" -o focusmode-windows-amd64.exe .
 
       - name: Create release directory
         run: |

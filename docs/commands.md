@@ -26,6 +26,12 @@ Switch directly to a mode:
 ./focusmode -switch -mode gamemode
 ```
 
+Start the Windows tray app:
+
+```bash
+./focusmode -tray
+```
+
 ## Flags
 
 | Flag | Default | Description |
@@ -40,6 +46,7 @@ Switch directly to a mode:
 | `-restore` | `false` | Restore shortcuts from one mode's destination folder to the desktop. |
 | `-restore-all` | `false` | Restore shortcuts from all configured mode folders to the desktop. |
 | `-switch` | `false` | Restore all shortcuts, then apply the selected mode. |
+| `-tray` | `false` | Run as a Windows system tray app. |
 
 ## Listing Modes
 
@@ -99,6 +106,14 @@ Preview a switch:
 ```bash
 ./focusmode -switch -mode gamemode -dry-run
 ```
+
+## System Tray
+
+```bash
+./focusmode -tray
+```
+
+On Windows, this starts a persistent notification-area icon. Click the icon to open a menu with one item per configured mode, plus `Restore all` and `Quit`.
 
 ## Custom Configuration Paths
 

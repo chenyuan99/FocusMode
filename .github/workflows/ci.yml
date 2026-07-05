@@ -35,7 +35,7 @@ jobs:
         run: go test -v ./...
 
       - name: Build
-        run: go build -v -o focusmode.exe move.go
+        run: go build -v -o focusmode.exe .
 
   build:
     name: Build for Windows
@@ -73,7 +73,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -v -o focusmode${{ matrix.ext }} move.go
+          go build -v -o focusmode${{ matrix.ext }} .
           mkdir -p dist
           mv focusmode${{ matrix.ext }} dist/focusmode-${{ matrix.name }}${{ matrix.ext }}
 

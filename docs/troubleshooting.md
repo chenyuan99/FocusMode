@@ -100,6 +100,6 @@ Then refresh dependencies and build again:
 
 ```bash
 go mod tidy
-go build -o focusmode move.go
+go build -o focusmode .
 ```
 
