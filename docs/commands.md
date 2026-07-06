@@ -121,6 +121,7 @@ Preview a switch:
 ```
 
 On Windows, this starts a persistent notification-area icon. Click the icon to open a menu with one item per configured mode, plus `Restore all` and `Quit`.
+The tray menu also includes `Report hours` for viewing tracked mode time without a terminal.
 
 ## Mode Stats
 

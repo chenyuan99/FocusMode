@@ -191,6 +191,7 @@ This is the easiest command to use from a taskbar shortcut because each shortcut
 ./focusmode -tray
 ```
 On Windows, this starts a persistent notification-area icon. Click the tray icon to switch modes, restore all shortcuts, or quit the tray app.
+Use `Report hours` from the tray menu to view tracked FocusMode/GameMode time without opening a terminal.
 
 ### View tracked mode hours
 ```bash

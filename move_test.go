@@ -1492,6 +1492,34 @@ func TestModeStatsSQLiteSwitchAccumulatesPreviousMode(t *testing.T) {
 	}
 }
 
+func TestBuildModeStatsReport(t *testing.T) {
+	config := &Config{
+		Modes: map[string]ModeConfig{
+			"focusmode": {},
+			"gamemode":  {},
+		},
+		DefaultMode: "focusmode",
+	}
+	totals := map[string]int64{
+		"focusmode": 3600,
+		"gamemode":  90,
+	}
+
+	report := buildModeStatsReport(config, totals, "gamemode", "focusmode_stats.db")
+
+	expectedParts := []string{
+		"Mode usage:",
+		"focusmode: 1h",
+		"gamemode: 1m 30s (active)",
+		"Stats file: focusmode_stats.db",
+	}
+	for _, expected := range expectedParts {
+		if !strings.Contains(report, expected) {
+			t.Errorf("Expected report to contain %q, got:\n%s", expected, report)
+		}
+	}
+}
+
 func TestGetStatsPathUsesConfigDirectory(t *testing.T) {
 	configPath := filepath.Join("configs", "profile.yml")
 	expected := filepath.Join("configs", "focusmode_stats.db")

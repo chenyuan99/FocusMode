@@ -428,7 +428,14 @@ func displayModeStats(config *Config, statsPath string) {
 		os.Exit(1)
 	}
 
-	fmt.Println("Mode usage:")
+	report := buildModeStatsReport(config, totals, activeMode, statsPath)
+	fmt.Print(report)
+}
+
+func buildModeStatsReport(config *Config, totals map[string]int64, activeMode string, statsPath string) string {
+	var report strings.Builder
+
+	report.WriteString("Mode usage:\n")
 	modes := config.getAvailableModes()
 	sort.Strings(modes)
 	for _, modeName := range modes {
@@ -437,9 +444,11 @@ func displayModeStats(config *Config, statsPath string) {
 		if modeName == activeMode {
 			activeMarker = " (active)"
 		}
-		fmt.Printf("  %s: %s%s\n", modeName, formatDuration(total), activeMarker)
+		report.WriteString(fmt.Sprintf("  %s: %s%s\n", modeName, formatDuration(total), activeMarker))
 	}
-	fmt.Printf("\nStats file: %s\n", statsPath)
+	report.WriteString(fmt.Sprintf("\nStats file: %s\n", statsPath))
+
+	return report.String()
 }
 
 // displayProgress displays the current progress of a focus session

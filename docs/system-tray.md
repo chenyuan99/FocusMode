@@ -14,6 +14,7 @@ The tray menu includes:
 
 - One `Switch to ...` item for each mode in `profile.yml`.
 - `Restore all`, which restores shortcuts from all configured mode folders.
+- `Report hours`, which shows tracked time from the local SQLite stats database.
 - `Quit`, which exits the tray app.
 
 Choosing a mode runs the same behavior as:
@@ -29,6 +30,8 @@ Mode switches from the tray are included in `focusmode_stats.db`. Run this to vi
 ```bash
 focusmode.exe -stats
 ```
+
+You can also click `Report hours` in the tray menu to see the same totals in a Windows dialog.
 
 ## Start With Windows
 

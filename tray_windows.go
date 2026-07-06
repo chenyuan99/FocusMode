@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"sort"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -39,7 +40,8 @@ const (
 
 	firstModeCommand = 1000
 	restoreCommand   = 2000
-	quitCommand      = 2001
+	reportCommand    = 2001
+	quitCommand      = 2002
 )
 
 type point struct {
@@ -109,6 +111,7 @@ var (
 	procSetForegroundWin = user32.NewProc("SetForegroundWindow")
 	procGetCursorPos     = user32.NewProc("GetCursorPos")
 	procTrackPopupMenu   = user32.NewProc("TrackPopupMenu")
+	procMessageBoxW      = user32.NewProc("MessageBoxW")
 
 	procShellNotifyIconW = shell32.NewProc("Shell_NotifyIconW")
 	procGetModuleHandleW = kernel.NewProc("GetModuleHandleW")
@@ -211,6 +214,9 @@ func buildTrayCommands(config *Config, exePath string, workingDir string, config
 	commands[restoreCommand] = func() {
 		startFocusModeCommand(exePath, workingDir, configPath, "-restore-all")
 	}
+	commands[reportCommand] = func() {
+		showTrayStatsReport(config, getStatsPath(configPath))
+	}
 	commands[quitCommand] = func() {
 		procDestroyWindow.Call(trayHWnd)
 	}
@@ -312,6 +318,7 @@ func showTrayMenu(hWnd uintptr) {
 
 	procAppendMenuW.Call(menu, mfSeparator, 0, 0)
 	appendMenuItem(menu, restoreCommand, "Restore all")
+	appendMenuItem(menu, reportCommand, "Report hours")
 	procAppendMenuW.Call(menu, mfSeparator, 0, 0)
 	appendMenuItem(menu, quitCommand, "Quit")
 
@@ -347,6 +354,35 @@ func handleTrayCommand(commandID uintptr) bool {
 
 	go action()
 	return true
+}
+
+func showTrayStatsReport(config *Config, statsPath string) {
+	db, err := openStatsDB(statsPath)
+	if err != nil {
+		showTrayMessage("FocusMode hours", fmt.Sprintf("Could not open stats database:\n%v", err))
+		return
+	}
+	defer db.Close()
+
+	totals, activeMode, err := readModeStats(db, time.Now())
+	if err != nil {
+		showTrayMessage("FocusMode hours", fmt.Sprintf("Could not read stats:\n%v", err))
+		return
+	}
+
+	showTrayMessage("FocusMode hours", buildModeStatsReport(config, totals, activeMode, statsPath))
+}
+
+func showTrayMessage(title string, body string) {
+	titlePtr, err := syscall.UTF16PtrFromString(title)
+	if err != nil {
+		return
+	}
+	bodyPtr, err := syscall.UTF16PtrFromString(body)
+	if err != nil {
+		return
+	}
+	procMessageBoxW.Call(trayHWnd, uintptr(unsafe.Pointer(bodyPtr)), uintptr(unsafe.Pointer(titlePtr)), 0)
 }
 
 func appendMenuItem(menu uintptr, commandID uintptr, title string) {
