@@ -40,6 +40,17 @@ wget https://raw.githubusercontent.com/chenyuan99/FocusMode/master/scripts/insta
 
 See [Distribution](docs/distribution.md) for install directory and pinned-version options.
 
+### Winget
+
+Draft winget manifests are available in `winget/manifests/c/ChenYuan/FocusMode/0.1.0/`.
+After they are accepted into `microsoft/winget-pkgs`, users can install with:
+
+```powershell
+winget install ChenYuan.FocusMode
+```
+
+See [Winget Submission](docs/winget.md) for submission notes.
+
 ### From Source
 
 1. Make sure you have Go installed (1.21 or later)

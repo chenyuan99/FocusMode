@@ -1,0 +1,7 @@
+# Created with guidance from the Windows Package Manager manifest schema.
+PackageIdentifier: ChenYuan.FocusMode
+PackageVersion: 0.1.0
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.12.0
+

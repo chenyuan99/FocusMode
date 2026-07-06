@@ -8,6 +8,7 @@ FocusMode is a command-line tool for keeping your desktop focused. It moves sele
 - [Configuration](configuration.md): Set up `profile.yml` and `categories.yml`.
 - [Command Reference](commands.md): See all supported commands and flags.
 - [Distribution](distribution.md): Download and install FocusMode with `wget`.
+- [Winget Submission](winget.md): Submit FocusMode to the Windows Package Manager registry.
 - [Taskbar Shortcuts](taskbar-shortcuts.md): Create one-click Windows shortcuts for switching modes.
 - [System Tray](system-tray.md): Run FocusMode as a persistent Windows tray app.
 - [Troubleshooting](troubleshooting.md): Fix common setup and usage problems.
