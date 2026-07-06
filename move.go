@@ -1,15 +1,18 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
+	_ "modernc.org/sqlite"
 )
 
 // ModeConfig represents the configuration for a specific mode
@@ -200,6 +203,243 @@ func formatDuration(d time.Duration) string {
 	}
 
 	return strings.Join(parts, " ")
+}
+
+func getStatsPath(configPath string) string {
+	if configPath == "" {
+		configPath = "profile.yml"
+	}
+	return filepath.Join(filepath.Dir(configPath), "focusmode_stats.db")
+}
+
+func openStatsDB(statsPath string) (*sql.DB, error) {
+	if err := os.MkdirAll(filepath.Dir(statsPath), 0755); err != nil {
+		return nil, fmt.Errorf("error creating stats directory: %w", err)
+	}
+
+	db, err := sql.Open("sqlite", statsPath)
+	if err != nil {
+		return nil, fmt.Errorf("error opening stats database: %w", err)
+	}
+
+	if err := initStatsDB(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func initStatsDB(db *sql.DB) error {
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS mode_totals (
+			mode TEXT PRIMARY KEY,
+			total_seconds INTEGER NOT NULL DEFAULT 0
+		)`,
+		`CREATE TABLE IF NOT EXISTS active_mode (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			mode TEXT NOT NULL,
+			active_since TEXT NOT NULL
+		)`,
+	}
+
+	for _, statement := range statements {
+		if _, err := db.Exec(statement); err != nil {
+			return fmt.Errorf("error initializing stats database: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func stopActiveModeTx(tx *sql.Tx, now time.Time) error {
+	var modeName string
+	var activeSinceText string
+	err := tx.QueryRow(`SELECT mode, active_since FROM active_mode WHERE id = 1`).Scan(&modeName, &activeSinceText)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("error reading active mode: %w", err)
+	}
+
+	activeSince, err := time.Parse(time.RFC3339Nano, activeSinceText)
+	if err != nil {
+		return fmt.Errorf("error parsing active mode timestamp: %w", err)
+	}
+
+	elapsed := now.Sub(activeSince)
+	if elapsed > 0 {
+		if _, err := tx.Exec(
+			`INSERT INTO mode_totals (mode, total_seconds)
+			 VALUES (?, ?)
+			 ON CONFLICT(mode) DO UPDATE SET total_seconds = total_seconds + excluded.total_seconds`,
+			modeName,
+			int64(elapsed.Seconds()),
+		); err != nil {
+			return fmt.Errorf("error updating mode total: %w", err)
+		}
+	}
+
+	if _, err := tx.Exec(`DELETE FROM active_mode WHERE id = 1`); err != nil {
+		return fmt.Errorf("error clearing active mode: %w", err)
+	}
+
+	return nil
+}
+
+func startModeTracking(statsPath string, modeName string, dryRun bool) {
+	if dryRun {
+		fmt.Printf("[DRY RUN] Would start tracking mode time for: %s\n", modeName)
+		return
+	}
+
+	db, err := openStatsDB(statsPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+		return
+	}
+	defer db.Close()
+
+	if err := startModeTrackingAt(db, modeName, time.Now()); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+	}
+}
+
+func startModeTrackingAt(db *sql.DB, modeName string, now time.Time) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting stats transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := stopActiveModeTx(tx, now); err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(
+		`INSERT INTO active_mode (id, mode, active_since)
+		 VALUES (1, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET mode = excluded.mode, active_since = excluded.active_since`,
+		modeName,
+		now.Format(time.RFC3339Nano),
+	); err != nil {
+		return fmt.Errorf("error setting active mode: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error saving stats transaction: %w", err)
+	}
+
+	return nil
+}
+
+func stopModeTracking(statsPath string, dryRun bool) {
+	if dryRun {
+		fmt.Println("[DRY RUN] Would stop tracking active mode time")
+		return
+	}
+
+	db, err := openStatsDB(statsPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+		return
+	}
+	defer db.Close()
+
+	if err := stopModeTrackingAt(db, time.Now()); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+	}
+}
+
+func stopModeTrackingAt(db *sql.DB, now time.Time) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting stats transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if err := stopActiveModeTx(tx, now); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error saving stats transaction: %w", err)
+	}
+
+	return nil
+}
+
+func readModeStats(db *sql.DB, now time.Time) (map[string]int64, string, error) {
+	totals := make(map[string]int64)
+
+	rows, err := db.Query(`SELECT mode, total_seconds FROM mode_totals`)
+	if err != nil {
+		return nil, "", fmt.Errorf("error reading mode totals: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var modeName string
+		var seconds int64
+		if err := rows.Scan(&modeName, &seconds); err != nil {
+			return nil, "", fmt.Errorf("error scanning mode total: %w", err)
+		}
+		totals[modeName] = seconds
+	}
+	if err := rows.Err(); err != nil {
+		return nil, "", fmt.Errorf("error reading mode totals: %w", err)
+	}
+
+	var activeMode string
+	var activeSinceText string
+	err = db.QueryRow(`SELECT mode, active_since FROM active_mode WHERE id = 1`).Scan(&activeMode, &activeSinceText)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return totals, "", nil
+		}
+		return nil, "", fmt.Errorf("error reading active mode: %w", err)
+	}
+
+	activeSince, err := time.Parse(time.RFC3339Nano, activeSinceText)
+	if err != nil {
+		return nil, "", fmt.Errorf("error parsing active mode timestamp: %w", err)
+	}
+
+	elapsed := now.Sub(activeSince)
+	if elapsed > 0 {
+		totals[activeMode] += int64(elapsed.Seconds())
+	}
+
+	return totals, activeMode, nil
+}
+
+func displayModeStats(config *Config, statsPath string) {
+	db, err := openStatsDB(statsPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading stats: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	totals, activeMode, err := readModeStats(db, time.Now())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading stats: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Mode usage:")
+	modes := config.getAvailableModes()
+	sort.Strings(modes)
+	for _, modeName := range modes {
+		total := time.Duration(totals[modeName]) * time.Second
+		activeMarker := ""
+		if modeName == activeMode {
+			activeMarker = " (active)"
+		}
+		fmt.Printf("  %s: %s%s\n", modeName, formatDuration(total), activeMarker)
+	}
+	fmt.Printf("\nStats file: %s\n", statsPath)
 }
 
 // displayProgress displays the current progress of a focus session
@@ -902,6 +1142,7 @@ func main() {
 	restoreAll := flag.Bool("restore-all", false, "Restore shortcuts from all modes back to desktop")
 	switchMode := flag.Bool("switch", false, "Restore all shortcuts, then apply the selected mode")
 	tray := flag.Bool("tray", false, "Run as a Windows system tray app")
+	statsFlag := flag.Bool("stats", false, "Show tracked mode usage totals")
 	flag.Parse()
 
 	// Auto-generate profile if requested
@@ -929,6 +1170,7 @@ func main() {
 			}
 			restoreShortcutsForMode(config, modeName, *dryRun)
 		}
+		stopModeTracking(getStatsPath(*configPath), *dryRun)
 		return
 	}
 
@@ -950,6 +1192,13 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		os.Exit(1)
+	}
+
+	statsPath := getStatsPath(*configPath)
+
+	if *statsFlag {
+		displayModeStats(config, statsPath)
+		return
 	}
 
 	if *tray {
@@ -981,6 +1230,7 @@ func main() {
 
 	if *switchMode {
 		fmt.Printf("Switching to mode: %s\n\n", modeName)
+		stopModeTracking(statsPath, *dryRun)
 		restoreAllShortcuts(config, *dryRun)
 		fmt.Println()
 	}
@@ -1065,4 +1315,6 @@ func main() {
 	} else {
 		fmt.Printf("All shortcuts moved to: %s\n", destinationFolder)
 	}
+
+	startModeTracking(statsPath, modeName, *dryRun)
 }

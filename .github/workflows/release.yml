@@ -75,6 +75,7 @@ jobs:
         working-directory: release
         run: |
           zip -q focusmode-${{ steps.version.outputs.version }}-windows-amd64.zip focusmode-windows-amd64.exe profile.yml categories.yml README.md
+          cp focusmode-${{ steps.version.outputs.version }}-windows-amd64.zip focusmode-windows-amd64.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

@@ -21,6 +21,14 @@ On Windows, you may prefer:
 go build -o focusmode.exe .
 ```
 
+## Install With wget
+
+```powershell
+wget https://github.com/chenyuan99/FocusMode/releases/latest/download/focusmode-windows-amd64.zip -OutFile focusmode-windows-amd64.zip
+Expand-Archive .\focusmode-windows-amd64.zip -DestinationPath .\FocusMode -Force
+.\FocusMode\focusmode-windows-amd64.exe -tray
+```
+
 ## First Run
 
 Start with a dry run so you can see what would happen without moving files:
@@ -94,3 +102,11 @@ On Windows, run:
 ```
 
 FocusMode will stay open in the notification area. Click the tray icon to switch modes, restore all shortcuts, or quit.
+
+## View Mode Hours
+
+```bash
+./focusmode -stats
+```
+
+FocusMode stores tracked time in `focusmode_stats.db` next to `profile.yml`.

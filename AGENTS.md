@@ -6,12 +6,13 @@ FocusMode is a small Go 1.21 command-line tool that organizes desktop shortcuts 
 
 ## Repository Layout
 
-- `move.go`: CLI flags, YAML config loading, shortcut categorization, move/restore logic, and focus-session helpers.
+- `move.go`: CLI flags, YAML config loading, SQLite mode usage tracking, shortcut categorization, move/restore logic, and focus-session helpers.
 - `move_test.go`: Unit tests for config parsing, categorization, file movement, restore behavior, and focus-session timing.
 - `profile.yml`: Example/default mode configuration.
 - `categories.yml`: Shortcut categorization keywords and display metadata.
 - `.github/workflows/ci.yml`: CI test/build workflow.
 - `.github/workflows/release.yml`: Tagged release packaging workflow.
+- `scripts/install.ps1`: wget-friendly Windows installer for GitHub release assets.
 
 ## Build and Test Commands
 
@@ -56,8 +57,11 @@ go test ./...
 
 - `profile.yml` controls modes such as `focusmode` and `gamemode`, their destination folders, explicit shortcut lists, and `move_all`.
 - `categories.yml` controls keyword-based classification used by `-list-desktop` and `-auto-config`.
+- `focusmode_stats.db` is a local SQLite usage database generated next to `profile.yml`; do not commit it.
 - If `categories.yml` is missing, the app falls back to default categories in code.
 
 ## Release Notes
 
 Releases are triggered by tags matching `v*.*.*`. The release workflow builds platform binaries, packages `profile.yml`, `categories.yml`, and `README.md`, creates checksums, and publishes a GitHub release.
+
+The Windows release also publishes a stable `focusmode-windows-amd64.zip` asset so users can download the latest release with `wget` from the GitHub `releases/latest/download` URL.

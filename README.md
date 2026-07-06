@@ -23,6 +23,23 @@ Download the latest release from the [Releases page](https://github.com/chenyuan
 
 Extract the archive and run `focusmode-windows-amd64.exe`.
 
+### With wget
+
+```powershell
+wget https://github.com/chenyuan99/FocusMode/releases/latest/download/focusmode-windows-amd64.zip -OutFile focusmode-windows-amd64.zip
+Expand-Archive .\focusmode-windows-amd64.zip -DestinationPath .\FocusMode -Force
+.\FocusMode\focusmode-windows-amd64.exe -tray
+```
+
+Or use the installer script:
+
+```powershell
+wget https://raw.githubusercontent.com/chenyuan99/FocusMode/master/scripts/install.ps1 -OutFile install-focusmode.ps1
+.\install-focusmode.ps1
+```
+
+See [Distribution](docs/distribution.md) for install directory and pinned-version options.
+
 ### From Source
 
 1. Make sure you have Go installed (1.21 or later)
@@ -175,6 +192,12 @@ This is the easiest command to use from a taskbar shortcut because each shortcut
 ```
 On Windows, this starts a persistent notification-area icon. Click the tray icon to switch modes, restore all shortcuts, or quit the tray app.
 
+### View tracked mode hours
+```bash
+./focusmode -stats
+```
+FocusMode tracks active time in `focusmode_stats.db`, stored next to `profile.yml`. Switching into a mode starts that mode's timer; switching modes or restoring shortcuts stops the previous active timer and saves the elapsed time.
+
 ### With custom config file
 ```bash
 ./focusmode -config myconfig.yml
@@ -197,6 +220,7 @@ On Windows, this starts a persistent notification-area icon. Click the tray icon
 - `-restore-all`: Restore shortcuts from all modes back to desktop
 - `-switch`: Restore all shortcuts, then apply the selected mode
 - `-tray`: Run as a Windows system tray app
+- `-stats`: Show tracked mode usage totals
 
 ## How it works
 

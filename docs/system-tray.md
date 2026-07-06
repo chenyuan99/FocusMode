@@ -24,6 +24,12 @@ focusmode.exe -switch -mode focusmode
 
 That means FocusMode restores currently hidden shortcuts first, then applies the selected mode.
 
+Mode switches from the tray are included in `focusmode_stats.db`. Run this to view totals:
+
+```bash
+focusmode.exe -stats
+```
+
 ## Start With Windows
 
 To start FocusMode automatically:
@@ -50,4 +56,3 @@ If your config lives somewhere else:
 ## Platform Support
 
 Tray mode is currently Windows-only. The regular command-line commands still work on Windows, macOS, and Linux.
-

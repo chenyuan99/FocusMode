@@ -32,6 +32,12 @@ Start the Windows tray app:
 ./focusmode -tray
 ```
 
+View tracked mode time:
+
+```bash
+./focusmode -stats
+```
+
 ## Flags
 
 | Flag | Default | Description |
@@ -47,6 +53,7 @@ Start the Windows tray app:
 | `-restore-all` | `false` | Restore shortcuts from all configured mode folders to the desktop. |
 | `-switch` | `false` | Restore all shortcuts, then apply the selected mode. |
 | `-tray` | `false` | Run as a Windows system tray app. |
+| `-stats` | `false` | Show tracked mode usage totals. |
 
 ## Listing Modes
 
@@ -114,6 +121,14 @@ Preview a switch:
 ```
 
 On Windows, this starts a persistent notification-area icon. Click the icon to open a menu with one item per configured mode, plus `Restore all` and `Quit`.
+
+## Mode Stats
+
+```bash
+./focusmode -stats
+```
+
+FocusMode tracks mode time in `focusmode_stats.db` next to `profile.yml`. A mode becomes active when you run it directly or switch to it. The active timer is saved into totals when you switch modes or restore shortcuts.
 
 ## Custom Configuration Paths
 

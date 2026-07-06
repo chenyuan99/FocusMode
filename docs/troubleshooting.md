@@ -103,3 +103,13 @@ go mod tidy
 go build -o focusmode .
 ```
 
+## Stats Look Wrong
+
+Mode time is saved when FocusMode switches modes or restores shortcuts. If the computer is shut down while a mode is active, the next `-stats`, `-switch`, or restore command will include the elapsed time since that mode started.
+
+The stats database is stored next to `profile.yml`:
+
+```text
+focusmode_stats.db
+```
+
