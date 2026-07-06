@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.12.0.schema.json
+
 PackageIdentifier: ChenYuan.FocusMode
 PackageVersion: 0.1.0
 PackageLocale: en-US
@@ -23,4 +25,3 @@ ReleaseNotes: Initial release with Windows tray mode, mode switching, shortcut r
 ReleaseNotesUrl: https://github.com/chenyuan99/FocusMode/releases/tag/v0.1.0
 ManifestType: defaultLocale
 ManifestVersion: 1.12.0
-
