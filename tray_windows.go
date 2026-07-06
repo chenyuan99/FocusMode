@@ -37,6 +37,9 @@ const (
 	tpmNonotify    = 0x00000080
 
 	idiApplication = 32512
+	imageIcon      = 1
+	lrLoadFromFile = 0x00000010
+	lrDefaultSize  = 0x00000040
 
 	firstModeCommand = 1000
 	restoreCommand   = 2000
@@ -105,6 +108,7 @@ var (
 	procTranslateMessage = user32.NewProc("TranslateMessage")
 	procDispatchMessageW = user32.NewProc("DispatchMessageW")
 	procLoadIconW        = user32.NewProc("LoadIconW")
+	procLoadImageW       = user32.NewProc("LoadImageW")
 	procCreatePopupMenu  = user32.NewProc("CreatePopupMenu")
 	procAppendMenuW      = user32.NewProc("AppendMenuW")
 	procDestroyMenu      = user32.NewProc("DestroyMenu")
@@ -248,7 +252,7 @@ func startFocusModeCommand(exePath string, workingDir string, configPath string,
 }
 
 func addTrayIcon(hWnd uintptr) error {
-	icon, _, _ := procLoadIconW.Call(0, idiApplication)
+	icon := loadTrayIcon()
 
 	var data notifyIconData
 	data.CbSize = uint32(unsafe.Sizeof(data))
@@ -264,6 +268,47 @@ func addTrayIcon(hWnd uintptr) error {
 	}
 
 	return nil
+}
+
+func loadTrayIcon() uintptr {
+	candidates := []string{}
+	if exePath, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exePath)
+		candidates = append(candidates,
+			filepath.Join(exeDir, "focusmode.ico"),
+			filepath.Join(exeDir, "assets", "focusmode.ico"),
+		)
+	}
+	if workingDir, err := os.Getwd(); err == nil {
+		candidates = append(candidates,
+			filepath.Join(workingDir, "focusmode.ico"),
+			filepath.Join(workingDir, "assets", "focusmode.ico"),
+		)
+	}
+
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err != nil {
+			continue
+		}
+		iconPath, err := syscall.UTF16PtrFromString(candidate)
+		if err != nil {
+			continue
+		}
+		icon, _, _ := procLoadImageW.Call(
+			0,
+			uintptr(unsafe.Pointer(iconPath)),
+			imageIcon,
+			0,
+			0,
+			lrLoadFromFile|lrDefaultSize,
+		)
+		if icon != 0 {
+			return icon
+		}
+	}
+
+	icon, _, _ := procLoadIconW.Call(0, idiApplication)
+	return icon
 }
 
 func deleteTrayIcon(hWnd uintptr) {
