@@ -6,26 +6,42 @@ modes:
     focusmode:
         destination: Hidden_Shortcuts
         shortcuts:
-            - 2023 Tax Panda 税表资料.zip
-            - 2023 Tax Panda 身份文件.zip
-            - CV----ChenYuan_1226_V2.0.docx
-            - Cities Skylines II.url
-            - Discord.lnk
-            - Discord.url
-            - EV加密播放2.lnk
-            - Microsoft Flight Simulator 2024.url
-            - Paradox Launcher v2.lnk
-            - World of Tanks.url
-            - desktop.ini
-            - ~$i Minamoto CV_Mar 9_2023.docx
-            - 小缇娜的奇幻之地.url
-            - 战地风云™ 6.url
+            - 3DMark.url
+            - Asphalt Legends Unite.url
+            - Cities Skylines.url
+            - EA SPORTS FC™ 26.url
+            - Fallout New Vegas.url
+            - Honkai Star Rail.url
+            - LEGO® 2K Drive.url
+            - NBA 2K26.url
+            - Roblox Player.lnk
+            - Rockstar Games Launcher.lnk
+            - Ubisoft Connect.lnk
+            - systemreport-20260616005326.txt
+            - 赛博朋克 2077.url
+            - 黑神话：悟空 性能测试工具.url
+            - 黑神话：悟空.url
         move_all: false
     gamemode:
         destination: Hidden_Shortcuts
         shortcuts:
-            - Cursor.lnk
+            - Bruno.lnk
+            - Comfy Desktop.lnk
             - Docker Desktop.lnk
+            - EV录屏.lnk
+            - Fidelity Trader+.lnk
+            - Google Cloud SDK Shell.lnk
+            - Google Docs.lnk
+            - Google Drive.lnk
+            - Google Password Manager.lnk
+            - Google Sheets.lnk
+            - Google Slides.lnk
+            - LM Studio.lnk
+            - Loom.lnk
+            - OpenClaw Companion.lnk
+            - Perplexity.lnk
+            - Roblox Studio.lnk
             - Visual Studio Code.lnk
+            - Yuan - Chrome.lnk
         move_all: false
 default_mode: focusmode

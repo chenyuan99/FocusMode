@@ -56,7 +56,7 @@ jobs:
           GOOS: windows
           GOARCH: amd64
         run: |
-          go build -v -ldflags="-s -w" -o focusmode-windows-amd64.exe move.go
+          go build -v -ldflags="-s -w" -o focusmode-windows-amd64.exe .
 
       - name: Create release directory
         run: |
@@ -75,6 +75,7 @@ jobs:
         working-directory: release
         run: |
           zip -q focusmode-${{ steps.version.outputs.version }}-windows-amd64.zip focusmode-windows-amd64.exe profile.yml categories.yml README.md
+          cp focusmode-${{ steps.version.outputs.version }}-windows-amd64.zip focusmode-windows-amd64.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

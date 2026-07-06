@@ -8,6 +8,8 @@ focusmode.exe -switch -mode focusmode
 
 The `-switch` flag restores shortcuts from all configured mode folders, then applies the selected mode. This makes it a good target for Windows taskbar shortcuts.
 
+If you prefer a persistent notification-area icon with a menu, use [System Tray](system-tray.md) instead.
+
 ## Create a Shortcut Per Mode
 
 1. Build or download `focusmode.exe`.

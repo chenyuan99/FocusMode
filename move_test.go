@@ -1416,3 +1416,115 @@ func TestFormatDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestModeStatsSQLiteStartStop(t *testing.T) {
+	tempDir := t.TempDir()
+	statsPath := filepath.Join(tempDir, "focusmode_stats.db")
+
+	db, err := openStatsDB(statsPath)
+	if err != nil {
+		t.Fatalf("openStatsDB() returned error: %v", err)
+	}
+	defer db.Close()
+
+	start := time.Date(2026, 7, 5, 12, 0, 0, 0, time.UTC)
+	if err := startModeTrackingAt(db, "focusmode", start); err != nil {
+		t.Fatalf("startModeTrackingAt() returned error: %v", err)
+	}
+
+	totals, activeMode, err := readModeStats(db, start.Add(30*time.Minute))
+	if err != nil {
+		t.Fatalf("readModeStats() returned error: %v", err)
+	}
+	if activeMode != "focusmode" {
+		t.Errorf("Expected active mode focusmode, got %q", activeMode)
+	}
+	if totals["focusmode"] != 30*60 {
+		t.Errorf("Expected active focusmode total 1800, got %d", totals["focusmode"])
+	}
+
+	if err := stopModeTrackingAt(db, start.Add(45*time.Minute)); err != nil {
+		t.Fatalf("stopModeTrackingAt() returned error: %v", err)
+	}
+
+	totals, activeMode, err = readModeStats(db, start.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("readModeStats() returned error after stop: %v", err)
+	}
+	if activeMode != "" {
+		t.Errorf("Expected active mode to be cleared, got %q", activeMode)
+	}
+	if totals["focusmode"] != 45*60 {
+		t.Errorf("Expected persisted focusmode total 2700, got %d", totals["focusmode"])
+	}
+}
+
+func TestModeStatsSQLiteSwitchAccumulatesPreviousMode(t *testing.T) {
+	tempDir := t.TempDir()
+	statsPath := filepath.Join(tempDir, "focusmode_stats.db")
+
+	db, err := openStatsDB(statsPath)
+	if err != nil {
+		t.Fatalf("openStatsDB() returned error: %v", err)
+	}
+	defer db.Close()
+
+	start := time.Date(2026, 7, 5, 10, 0, 0, 0, time.UTC)
+	if err := startModeTrackingAt(db, "focusmode", start); err != nil {
+		t.Fatalf("startModeTrackingAt(focusmode) returned error: %v", err)
+	}
+	if err := startModeTrackingAt(db, "gamemode", start.Add(90*time.Minute)); err != nil {
+		t.Fatalf("startModeTrackingAt(gamemode) returned error: %v", err)
+	}
+
+	totals, activeMode, err := readModeStats(db, start.Add(2*time.Hour))
+	if err != nil {
+		t.Fatalf("readModeStats() returned error: %v", err)
+	}
+	if activeMode != "gamemode" {
+		t.Errorf("Expected active mode gamemode, got %q", activeMode)
+	}
+	if totals["focusmode"] != 90*60 {
+		t.Errorf("Expected focusmode total 5400, got %d", totals["focusmode"])
+	}
+	if totals["gamemode"] != 30*60 {
+		t.Errorf("Expected active gamemode total 1800, got %d", totals["gamemode"])
+	}
+}
+
+func TestBuildModeStatsReport(t *testing.T) {
+	config := &Config{
+		Modes: map[string]ModeConfig{
+			"focusmode": {},
+			"gamemode":  {},
+		},
+		DefaultMode: "focusmode",
+	}
+	totals := map[string]int64{
+		"focusmode": 3600,
+		"gamemode":  90,
+	}
+
+	report := buildModeStatsReport(config, totals, "gamemode", "focusmode_stats.db")
+
+	expectedParts := []string{
+		"Mode usage:",
+		"focusmode: 1h",
+		"gamemode: 1m 30s (active)",
+		"Stats file: focusmode_stats.db",
+	}
+	for _, expected := range expectedParts {
+		if !strings.Contains(report, expected) {
+			t.Errorf("Expected report to contain %q, got:\n%s", expected, report)
+		}
+	}
+}
+
+func TestGetStatsPathUsesConfigDirectory(t *testing.T) {
+	configPath := filepath.Join("configs", "profile.yml")
+	expected := filepath.Join("configs", "focusmode_stats.db")
+
+	if got := getStatsPath(configPath); got != expected {
+		t.Errorf("Expected stats path %q, got %q", expected, got)
+	}
+}

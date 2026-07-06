@@ -23,6 +23,23 @@ Download the latest release from the [Releases page](https://github.com/chenyuan
 
 Extract the archive and run `focusmode-windows-amd64.exe`.
 
+### With wget
+
+```powershell
+wget https://github.com/chenyuan99/FocusMode/releases/latest/download/focusmode-windows-amd64.zip -OutFile focusmode-windows-amd64.zip
+Expand-Archive .\focusmode-windows-amd64.zip -DestinationPath .\FocusMode -Force
+.\FocusMode\focusmode-windows-amd64.exe -tray
+```
+
+Or use the installer script:
+
+```powershell
+wget https://raw.githubusercontent.com/chenyuan99/FocusMode/master/scripts/install.ps1 -OutFile install-focusmode.ps1
+.\install-focusmode.ps1
+```
+
+See [Distribution](docs/distribution.md) for install directory and pinned-version options.
+
 ### From Source
 
 1. Make sure you have Go installed (1.21 or later)
@@ -32,7 +49,7 @@ Extract the archive and run `focusmode-windows-amd64.exe`.
    ```
 3. Build the project:
    ```bash
-   go build -o focusmode move.go
+   go build -o focusmode .
    ```
 
 ## Configuration
@@ -169,6 +186,19 @@ This command moves shortcuts back from organized folders to your desktop. Useful
 ```
 This is the easiest command to use from a taskbar shortcut because each shortcut can switch directly to one mode.
 
+### Run as a system tray app
+```bash
+./focusmode -tray
+```
+On Windows, this starts a persistent notification-area icon. Click the tray icon to switch modes, restore all shortcuts, or quit the tray app.
+Use `Report hours` from the tray menu to view tracked FocusMode/GameMode time without opening a terminal.
+
+### View tracked mode hours
+```bash
+./focusmode -stats
+```
+FocusMode tracks active time in `focusmode_stats.db`, stored next to `profile.yml`. Switching into a mode starts that mode's timer; switching modes or restoring shortcuts stops the previous active timer and saves the elapsed time.
+
 ### With custom config file
 ```bash
 ./focusmode -config myconfig.yml
@@ -190,6 +220,8 @@ This is the easiest command to use from a taskbar shortcut because each shortcut
 - `-restore`: Restore shortcuts from a specific mode's folder back to desktop
 - `-restore-all`: Restore shortcuts from all modes back to desktop
 - `-switch`: Restore all shortcuts, then apply the selected mode
+- `-tray`: Run as a Windows system tray app
+- `-stats`: Show tracked mode usage totals
 
 ## How it works
 
@@ -294,10 +326,10 @@ The test suite includes:
 ### Building Locally
 ```bash
 # Build for current platform
-go build -o focusmode move.go
+go build -o focusmode .
 
 # Build for specific platform
-GOOS=linux GOARCH=amd64 go build -o focusmode-linux-amd64 move.go
+GOOS=linux GOARCH=amd64 go build -o focusmode-linux-amd64 .
 ```
 
 ## License

@@ -26,6 +26,18 @@ Switch directly to a mode:
 ./focusmode -switch -mode gamemode
 ```
 
+Start the Windows tray app:
+
+```bash
+./focusmode -tray
+```
+
+View tracked mode time:
+
+```bash
+./focusmode -stats
+```
+
 ## Flags
 
 | Flag | Default | Description |
@@ -40,6 +52,8 @@ Switch directly to a mode:
 | `-restore` | `false` | Restore shortcuts from one mode's destination folder to the desktop. |
 | `-restore-all` | `false` | Restore shortcuts from all configured mode folders to the desktop. |
 | `-switch` | `false` | Restore all shortcuts, then apply the selected mode. |
+| `-tray` | `false` | Run as a Windows system tray app. |
+| `-stats` | `false` | Show tracked mode usage totals. |
 
 ## Listing Modes
 
@@ -99,6 +113,23 @@ Preview a switch:
 ```bash
 ./focusmode -switch -mode gamemode -dry-run
 ```
+
+## System Tray
+
+```bash
+./focusmode -tray
+```
+
+On Windows, this starts a persistent notification-area icon. Click the icon to open a menu with one item per configured mode, plus `Restore all` and `Quit`.
+The tray menu also includes `Report hours` for viewing tracked mode time without a terminal.
+
+## Mode Stats
+
+```bash
+./focusmode -stats
+```
+
+FocusMode tracks mode time in `focusmode_stats.db` next to `profile.yml`. A mode becomes active when you run it directly or switch to it. The active timer is saved into totals when you switch modes or restore shortcuts.
 
 ## Custom Configuration Paths
 
