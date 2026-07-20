@@ -214,6 +214,7 @@ FocusMode tracks active time in `focusmode_stats.db`, stored next to `profile.ym
 ```bash
 ./focusmode -config myconfig.yml
 ```
+When `-config` or `-categories` is not provided, FocusMode looks for the default files next to the resolved executable. This keeps Winget aliases, desktop shortcuts, and symlinks from depending on the current working directory. Explicit relative paths are still resolved from the directory where you run the command.
 
 ### Dry-run (preview without moving)
 ```bash
@@ -233,10 +234,11 @@ FocusMode tracks active time in `focusmode_stats.db`, stored next to `profile.ym
 - `-switch`: Restore all shortcuts, then apply the selected mode
 - `-tray`: Run as a Windows system tray app
 - `-stats`: Show tracked mode usage totals
+- `-version`: Show version information
 
 ## How it works
 
-1. Reads configuration from `profile.yml`
+1. Reads configuration from `profile.yml` next to the executable by default
 2. Creates destination folder in your home directory (if it doesn't exist)
 3. Moves specified shortcuts from desktop to the destination folder
 4. Provides a summary of moved files

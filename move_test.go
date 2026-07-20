@@ -1528,3 +1528,68 @@ func TestGetStatsPathUsesConfigDirectory(t *testing.T) {
 		t.Errorf("Expected stats path %q, got %q", expected, got)
 	}
 }
+
+func TestResolveDefaultPathUsesExecutableDirectory(t *testing.T) {
+	baseDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(baseDir, "profile.yml"), []byte("modes: {}\n"), 0644); err != nil {
+		t.Fatalf("Failed to write base config: %v", err)
+	}
+	expected := filepath.Join(baseDir, "profile.yml")
+
+	if got := resolveDefaultPath("profile.yml", "profile.yml", baseDir); got != expected {
+		t.Errorf("Expected default path %q, got %q", expected, got)
+	}
+}
+
+func TestResolveDefaultPathFallsBackToCurrentDirectory(t *testing.T) {
+	baseDir := t.TempDir()
+	workingDir := t.TempDir()
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	defer os.Chdir(oldWd)
+
+	if err := os.Chdir(workingDir); err != nil {
+		t.Fatalf("Failed to change working directory: %v", err)
+	}
+	if err := os.WriteFile("profile.yml", []byte("modes: {}\n"), 0644); err != nil {
+		t.Fatalf("Failed to write working directory config: %v", err)
+	}
+
+	expected := filepath.Join(workingDir, "profile.yml")
+	if got := resolveDefaultPath("profile.yml", "profile.yml", baseDir); got != expected {
+		t.Errorf("Expected default path %q, got %q", expected, got)
+	}
+}
+
+func TestResolveDefaultPathPreservesExplicitPaths(t *testing.T) {
+	baseDir := t.TempDir()
+	relativePath := filepath.Join("configs", "profile.yml")
+	absolutePath := filepath.Join(baseDir, "custom.yml")
+
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{
+			name: "explicit relative path",
+			path: relativePath,
+			want: relativePath,
+		},
+		{
+			name: "explicit absolute path",
+			path: absolutePath,
+			want: absolutePath,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := resolveDefaultPath(tt.path, "profile.yml", baseDir); got != tt.want {
+				t.Errorf("Expected path %q, got %q", tt.want, got)
+			}
+		})
+	}
+}

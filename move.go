@@ -15,6 +15,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const appVersion = "0.1.0"
+
 // ModeConfig represents the configuration for a specific mode
 type ModeConfig struct {
 	Destination string   `yaml:"destination"`
@@ -210,6 +212,58 @@ func getStatsPath(configPath string) string {
 		configPath = "profile.yml"
 	}
 	return filepath.Join(filepath.Dir(configPath), "focusmode_stats.db")
+}
+
+func executableDir() (string, error) {
+	exePath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	resolvedPath, err := filepath.EvalSymlinks(exePath)
+	if err == nil {
+		exePath = resolvedPath
+	}
+
+	absPath, err := filepath.Abs(exePath)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Dir(absPath), nil
+}
+
+func flagWasSet(name string) bool {
+	wasSet := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			wasSet = true
+		}
+	})
+	return wasSet
+}
+
+func resolveDefaultPath(path string, defaultName string, baseDir string) string {
+	if path == "" {
+		path = defaultName
+	}
+
+	if filepath.IsAbs(path) || filepath.Clean(path) != defaultName {
+		return path
+	}
+
+	basePath := filepath.Join(baseDir, path)
+	if _, err := os.Stat(basePath); err == nil {
+		return basePath
+	}
+
+	if cwdPath, err := filepath.Abs(path); err == nil {
+		if _, statErr := os.Stat(cwdPath); statErr == nil {
+			return cwdPath
+		}
+	}
+
+	return basePath
 }
 
 func openStatsDB(statsPath string) (*sql.DB, error) {
@@ -1152,7 +1206,25 @@ func main() {
 	switchMode := flag.Bool("switch", false, "Restore all shortcuts, then apply the selected mode")
 	tray := flag.Bool("tray", false, "Run as a Windows system tray app")
 	statsFlag := flag.Bool("stats", false, "Show tracked mode usage totals")
+	version := flag.Bool("version", false, "Show version information")
 	flag.Parse()
+
+	if *version {
+		fmt.Printf("FocusMode %s\n", appVersion)
+		return
+	}
+
+	exeDir, err := executableDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error locating executable: %v\n", err)
+		os.Exit(1)
+	}
+	if !flagWasSet("config") {
+		*configPath = resolveDefaultPath(*configPath, "profile.yml", exeDir)
+	}
+	if !flagWasSet("categories") {
+		*categoriesPath = resolveDefaultPath(*categoriesPath, "categories.yml", exeDir)
+	}
 
 	// Auto-generate profile if requested
 	if *autoConfig {
